@@ -1,3 +1,4 @@
+using ContentMirror.Application;
 using ContentMirror.Application.Configuration;
 using ContentMirror.Application.Services;
 using ContentMirror.Core.Configs;
@@ -21,6 +22,8 @@ try
     Log.Information("OTLP Token: {Token}", otlpConfig.Token);
     
     builder.Host.UseSerilog(Log.Logger);
+
+    builder.Services.AddParsers();
 
     builder.Services.AddHostedService<GatewayHost>();
 
