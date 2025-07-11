@@ -3,6 +3,7 @@ namespace ContentMirror.Application.Services;
 public class GatewayHost(ILogger<GatewayHost> logger, IHostApplicationLifetime lifetime) : IHostedService
 {
     private Task _worker = null!;
+    private readonly TimeSpan _delay = TimeSpan.FromHours(1);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -43,6 +44,8 @@ public class GatewayHost(ILogger<GatewayHost> logger, IHostApplicationLifetime l
         {
             try
             {
+                
+                await Task.Delay(_delay, lifetime.ApplicationStopping);
             }
             catch (Exception e)
             {
