@@ -1,6 +1,8 @@
 using ContentMirror.Application.Configuration;
+using ContentMirror.Application.Services;
 using ContentMirror.Core.Configs;
 using Serilog;
+using Spectre.Console;
 
 try
 {
@@ -20,13 +22,22 @@ try
     
     builder.Host.UseSerilog(Log.Logger);
 
+    builder.Services.AddHostedService<GatewayHost>();
+
     var app = builder.Build();
 
     app.Run();
 }
 catch (Exception e)
 {
-    Log.ForContext<Program>().Fatal(e, "Ошибка инициализации сервиса");
+    if (ConfigureLogging.IsConfigured)
+    {
+        Log.ForContext<Program>().Fatal(e, "Ошибка инициализации сервиса");
+    }
+    else
+    {
+        AnsiConsole.WriteException(e);
+    }
 }
 finally
 {

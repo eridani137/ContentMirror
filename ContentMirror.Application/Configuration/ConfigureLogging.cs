@@ -7,6 +7,7 @@ namespace ContentMirror.Application.Configuration;
 
 public static class ConfigureLogging
 {
+    public static bool IsConfigured { get; set; }
     public static void Configure(OpenTelemetryConfig otlpConfig)
     {
         const string logs = "logs";
@@ -34,5 +35,7 @@ public static class ConfigureLogging
             .WriteTo.File($"{logsPath}/.log", rollingInterval: RollingInterval.Day, outputTemplate: outputTemplate, levelSwitch: levelSwitch)
             .WriteTo.Seq(otlpConfig.Endpoint, apiKey: otlpConfig.Token)
             .CreateLogger();
+
+        IsConfigured = true;
     }
 }
