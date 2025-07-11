@@ -20,7 +20,7 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
     public async Task ParsePage(int page)
     {
         var url = GetPaginationUrl(page);
-        logger.LogInformation("Получение страницы {PageUrl}", url);
+        logger.LogInformation("Получение новостей со страницы {PageUrl}", url);
 
         var parse = await url
             .WithHeaders(parsingConfig.Value.Headers)
@@ -46,6 +46,10 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
                     continue;
                 }
                 
+                // TODO: check is contains
+                
+                logger.LogInformation("Парсинг {Title} [{Url}]", preview.Title, preview.Url);
+                
                 var newsEntity = new NewsEntity()
                 {
                     Preview = preview
@@ -60,8 +64,10 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
 
     public PreviewNewsEntity? ParsePreview(ParserWrapper parse, string xpath)
     {
-        var title = parse.GetInnerText($"{xpath}//a[@class='entry-title-link']");
-        var url = parse.GetAttributeValue($"{xpath}//a[@class='entry-title-link']");
+        const string a = "//h2[@class='entry-title']/a";
+        
+        var title = parse.GetInnerText($"{xpath}{a}");
+        var url = parse.GetAttributeValue($"{xpath}{a}");
         var description = parse.GetInnerText($"{xpath}//div[@class='entry-content']/p");
 
         if (string.IsNullOrEmpty(title) ||
