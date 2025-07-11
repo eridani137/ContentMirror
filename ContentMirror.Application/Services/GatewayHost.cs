@@ -1,6 +1,9 @@
+using ContentMirror.Application.Parsers;
+
 namespace ContentMirror.Application.Services;
 
-public class GatewayHost(ILogger<GatewayHost> logger, IHostApplicationLifetime lifetime) : IHostedService
+public class GatewayHost(ParsersFactory parsersFactory, ILogger<GatewayHost> logger, IHostApplicationLifetime lifetime)
+    : IHostedService
 {
     private Task _worker = null!;
     private readonly TimeSpan _delay = TimeSpan.FromHours(1);
@@ -16,6 +19,7 @@ public class GatewayHost(ILogger<GatewayHost> logger, IHostApplicationLifetime l
         {
             logger.LogError(e, "Ошибка запуска сервиса");
         }
+
         return Task.CompletedTask;
     }
 
@@ -39,11 +43,16 @@ public class GatewayHost(ILogger<GatewayHost> logger, IHostApplicationLifetime l
     private async Task Worker()
     {
         await Task.Delay(3000, lifetime.ApplicationStopping);
-        
+
         while (!lifetime.ApplicationStopping.IsCancellationRequested)
         {
             try
             {
+                var parsers = parsersFactory.GetParsers();
+                foreach (var parser in parsers)
+                {
+                    await parser.ParsePage(1);
+                }
                 
                 await Task.Delay(_delay, lifetime.ApplicationStopping);
             }

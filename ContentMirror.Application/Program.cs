@@ -20,6 +20,8 @@ try
     
     Log.Information("OTLP Endpoint: {Endpoint}", otlpConfig.Endpoint);
     Log.Information("OTLP Token: {Token}", otlpConfig.Token);
+
+    builder.Services.Configure<ParsingConfig>(builder.Configuration.GetSection(nameof(ParsingConfig)));
     
     builder.Host.UseSerilog(Log.Logger);
 
