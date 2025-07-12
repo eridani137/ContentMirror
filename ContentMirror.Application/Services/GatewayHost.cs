@@ -54,7 +54,8 @@ public class GatewayHost(
         {
             try
             {
-                logger.LogInformation("Начало обработки");
+                logger.LogInformation("Начало обработки сайтов");
+
                 var parsers = parsersFactory.GetParsers();
                 var now = DateTime.Now;
                 foreach (var parser in parsers)
@@ -77,12 +78,15 @@ public class GatewayHost(
 
                     logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
                         now.Add(-siteConfig.MaxCreatedAt).Date.ToString(ParsingConfig.DateFormat));
-                    await parser.ParsePage(1);
+                    var news = await parser.ParseNews();
                 }
 
-                logger.LogInformation("Обработка всех парсеров завершена, следующая {DateTime}",
+                logger.LogInformation("Обработка всех сайтов завершена, следующая {DateTime}",
                     now.Add(_delay).ToString(ParsingConfig.DatetimeFormat));
                 await Task.Delay(_delay, lifetime.ApplicationStopping);
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch (Exception e)
             {

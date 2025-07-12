@@ -9,6 +9,7 @@ public interface ISiteParser
     public string SiteUrl { get; }
     public CookieJar Cookies { get; set; }
     string GetPaginationUrl(int number);
-    Task ParsePage(int page);
+    Task<List<NewsEntity>> ParseNews(CancellationToken ct = default);
+    Task<List<NewsEntity>> ParsePage(int page, CancellationToken ct = default);
     PreviewNewsEntity? ParsePreview(ParserWrapper parse, string xpath);
 }

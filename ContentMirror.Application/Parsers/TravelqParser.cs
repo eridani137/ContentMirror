@@ -17,55 +17,89 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         return $"{SiteUrl}/page/{number}/";
     }
 
-    public async Task ParsePage(int page)
+    public async Task<List<NewsEntity>> ParseNews(CancellationToken ct = default)
+    {
+        var result = new List<NewsEntity>();
+
+        var i = 1;
+        while (!ct.IsCancellationRequested)
+        {
+            try
+            {
+                var pageResult = await ParsePage(i, ct);
+                if (pageResult.Count == 0) break;
+                result.AddRange(pageResult);
+            }
+            catch
+            {
+                break;
+            }
+
+            i++;
+        }
+
+        return result;
+    }
+
+    public async Task<List<NewsEntity>> ParsePage(int page, CancellationToken ct = default)
     {
         var url = GetPaginationUrl(page);
-        logger.LogInformation("Получение новостей со страницы {PageUrl}", url);
+        logger.LogInformation("Получение новостей со страницы {Page} [{PageUrl}]", page, url);
 
         var parse = await url
             .WithHeaders(parsingConfig.Value.Headers)
             .WithCookies(Cookies)
-            .GetStringAsync()
+            .GetStringAsync(cancellationToken: ct)
             .GetParse();
 
         if (parse is null)
         {
             logger.LogError("Ошибка получения страницы {PageUrl}", url);
-            return;
+            return [];
         }
+
+        var result = new List<NewsEntity>();
 
         var newsXpaths = parse.GetXPaths("//main[@id='genesis-content']/div/article");
         foreach (var newsXpath in newsXpaths)
         {
             try
             {
+                if (ct.IsCancellationRequested) break;
+                
                 var preview = ParsePreview(parse, newsXpath);
                 if (preview is null)
                 {
                     logger.LogError("Не удалось разобрать HTML: {OuterHtml}", parse.GetOuterHtml(newsXpath));
                     continue;
                 }
-                
+
                 // TODO: check is contains
-                
-                logger.LogInformation("Парсинг {Title} [{Url}]", preview.Title, preview.Url);
-                
+
+                // logger.LogInformation("Парсинг {Title} [{Url}]", preview.Title, preview.Url);
+
                 var newsEntity = new NewsEntity()
                 {
                     Preview = preview
                 };
+                result.Add(newsEntity);
+            }
+            catch (OperationCanceledException)
+            {
             }
             catch (Exception e)
             {
                 logger.LogError(e, "Ошибка в цикле обработки списка новостей");
             }
         }
+
+        return result;
     }
 
     public PreviewNewsEntity? ParsePreview(ParserWrapper parse, string xpath)
     {
         const string a = "//h2[@class='entry-title']/a";
-        
+
         var title = parse.GetInnerText($"{xpath}{a}");
         var url = parse.GetAttributeValue($"{xpath}{a}");
         var description = parse.GetInnerText($"{xpath}//div[@class='entry-content']/p");
