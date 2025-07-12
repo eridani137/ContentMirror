@@ -56,22 +56,32 @@ public class GatewayHost(
             {
                 logger.LogInformation("Начало обработки");
                 var parsers = parsersFactory.GetParsers();
+                var now = DateTime.Now;
                 foreach (var parser in parsers)
                 {
-                    if (!parsingConfig.Value.Sites.TryGetValue(parser.SiteUrl, out var isEnabled) || !isEnabled)
+                    if (parsingConfig.Value.Sites.FirstOrDefault(s => s.Url == parser.SiteUrl) is not { } siteConfig)
                     {
                         logger.LogWarning(
-                            "Обработка {Url} пропущена, так как сайт выключен или отстутствует в конфигурации",
+                            "Обработка {Url} пропущена, так как сайт отсутствует в конфигурации",
                             parser.SiteUrl);
                         continue;
                     }
 
-                    logger.LogInformation("Обработка {Url}", parser.SiteUrl);
+                    if (!siteConfig.IsEnabled)
+                    {
+                        logger.LogWarning(
+                            "Обработка {Url} пропущена, так как сайт отключен в конфигурации",
+                            parser.SiteUrl);
+                        continue;
+                    }
+
+                    logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
+                        now.Add(-siteConfig.MaxCreatedAt).Date.ToString(ParsingConfig.DateFormat));
                     await parser.ParsePage(1);
                 }
 
                 logger.LogInformation("Обработка всех парсеров завершена, следующая {DateTime}",
-                    DateTime.Now.Add(_delay));
+                    now.Add(_delay).ToString(ParsingConfig.DatetimeFormat));
                 await Task.Delay(_delay, lifetime.ApplicationStopping);
             }
             catch (Exception e)
