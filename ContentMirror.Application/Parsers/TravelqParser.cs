@@ -69,19 +69,24 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         var title = parse.GetInnerText($"{xpath}{a}");
         var url = parse.GetAttributeValue($"{xpath}{a}");
         var description = parse.GetInnerText($"{xpath}//div[@class='entry-content']/p");
+        var dateString = parse.GetInnerText($"{xpath}//p[@class='entry-meta']");
 
         if (string.IsNullOrEmpty(title) ||
             string.IsNullOrEmpty(url) ||
-            string.IsNullOrEmpty(description))
+            string.IsNullOrEmpty(description) ||
+            string.IsNullOrEmpty(dateString))
         {
             return null;
         }
+
+        if (!DateTime.TryParse(dateString, out var date)) return null;
 
         return new PreviewNewsEntity()
         {
             Url = url,
             Title = title,
-            Description = description
+            Description = description,
+            Date = date
         };
     }
 }

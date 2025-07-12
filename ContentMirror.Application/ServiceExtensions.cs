@@ -1,6 +1,7 @@
 using System.Reflection;
 using ContentMirror.Application.Parsers;
 using ContentMirror.Application.Parsers.Abstractions;
+using ContentMirror.Core.Configs;
 
 namespace ContentMirror.Application;
 

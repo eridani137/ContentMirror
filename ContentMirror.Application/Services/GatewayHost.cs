@@ -1,8 +1,14 @@
 using ContentMirror.Application.Parsers;
+using ContentMirror.Core.Configs;
+using Microsoft.Extensions.Options;
 
 namespace ContentMirror.Application.Services;
 
-public class GatewayHost(ParsersFactory parsersFactory, ILogger<GatewayHost> logger, IHostApplicationLifetime lifetime)
+public class GatewayHost(
+    ParsersFactory parsersFactory,
+    IOptions<ParsingConfig> parsingConfig,
+    ILogger<GatewayHost> logger,
+    IHostApplicationLifetime lifetime)
     : IHostedService
 {
     private Task _worker = null!;
@@ -48,12 +54,24 @@ public class GatewayHost(ParsersFactory parsersFactory, ILogger<GatewayHost> log
         {
             try
             {
+                logger.LogInformation("Начало обработки");
                 var parsers = parsersFactory.GetParsers();
                 foreach (var parser in parsers)
                 {
+                    if (!parsingConfig.Value.Sites.TryGetValue(parser.SiteUrl, out var isEnabled) || !isEnabled)
+                    {
+                        logger.LogWarning(
+                            "Обработка {Url} пропущена, так как сайт выключен или отстутствует в конфигурации",
+                            parser.SiteUrl);
+                        continue;
+                    }
+
+                    logger.LogInformation("Обработка {Url}", parser.SiteUrl);
                     await parser.ParsePage(1);
                 }
-                
+
+                logger.LogInformation("Обработка всех парсеров завершена, следующая {DateTime}",
+                    DateTime.Now.Add(_delay));
                 await Task.Delay(_delay, lifetime.ApplicationStopping);
             }
             catch (Exception e)

@@ -18,12 +18,17 @@ try
     ConfigureLogging.Configure(otlpConfig);
     OpenTelemetryConfiguration.Configure(builder, otlpConfig);
     
+    builder.Host.UseSerilog(Log.Logger);
+    
     Log.Information("OTLP Endpoint: {Endpoint}", otlpConfig.Endpoint);
     Log.Information("OTLP Token: {Token}", otlpConfig.Token);
 
     builder.Services.Configure<ParsingConfig>(builder.Configuration.GetSection(nameof(ParsingConfig)));
-    
-    builder.Host.UseSerilog(Log.Logger);
+    var parsingConfig = builder.Configuration.GetSection(nameof(ParsingConfig)).Get<ParsingConfig>();
+    if (parsingConfig is null)
+    {
+        throw new ApplicationException("Нужно указать настройки парсинга");
+    }
 
     builder.Services.AddParsers();
 
