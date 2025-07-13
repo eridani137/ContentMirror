@@ -18,32 +18,31 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         return $"{SiteUrl}/page/{number}/";
     }
 
-    public async Task<List<NewsEntity>> ParseNews(CancellationToken ct = default)
+    public async Task<List<NewsEntity>> ParseNews(List<string> existPosts, CancellationToken ct = default)
     {
         var result = new List<NewsEntity>();
 
-        var i = 1;
+        var page = 1;
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                var pageResult = await ParsePage(i, ct);
+                var pageResult = await ParsePage(page, existPosts, ct);
                 if (pageResult.Count == 0) break;
                 result.AddRange(pageResult);
                 break; // TODO
+                page++;
             }
             catch
             {
                 break;
             }
-
-            i++;
         }
 
         return result;
     }
 
-    public async Task<List<NewsEntity>> ParsePage(int page, CancellationToken ct = default)
+    public async Task<List<NewsEntity>> ParsePage(int page, List<string> existPosts, CancellationToken ct = default)
     {
         var url = GetPaginationUrl(page);
         logger.LogInformation("Получение новостей со страницы {Page} [{PageUrl}]", page, url);
@@ -76,7 +75,11 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
                     continue;
                 }
 
-                // TODO: check is contains
+                if (existPosts.Contains(preview.Title))
+                {
+                    logger.LogInformation("Пропускаю новость: {Title} [{Url}]", preview.Title, preview.Url);
+                    continue;
+                }
 
                 var newsEntity = await ParseFullPage(preview, ct);
                 

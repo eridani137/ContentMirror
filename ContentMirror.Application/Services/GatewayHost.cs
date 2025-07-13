@@ -20,7 +20,7 @@ public class GatewayHost(
     {
         try
         {
-            await siteService.Authorization();
+            await siteService.Authorization(cancellationToken);
             
             _worker = Worker();
             logger.LogInformation("Сервис запущен");
@@ -56,6 +56,8 @@ public class GatewayHost(
         {
             try
             {
+                var existTitlePosts = await siteService.GetPosts(lifetime.ApplicationStopping);
+                
                 logger.LogInformation("Начало обработки сайтов");
 
                 var parsers = parsersFactory.GetParsers();
@@ -80,7 +82,7 @@ public class GatewayHost(
 
                     logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
                         now.Add(-siteConfig.MaxCreatedAt).Date.ToString(StaticData.DateFormat));
-                    var news = await parser.ParseNews();
+                    var news = await parser.ParseNews(existTitlePosts);
                 }
 
                 logger.LogInformation("Обработка всех сайтов завершена, следующая {DateTime}",
