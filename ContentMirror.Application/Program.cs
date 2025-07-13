@@ -29,9 +29,16 @@ try
     {
         throw new ApplicationException("Нужно указать настройки парсинга");
     }
+    
+    builder.Services.Configure<ParsingConfig>(builder.Configuration.GetSection(nameof(SiteConfig)));
+    var siteConfig = builder.Configuration.GetSection(nameof(SiteConfig)).Get<SiteConfig>();
+    if (siteConfig is null)
+    {
+        throw new ApplicationException("Нужно указать настройки основного сайта");
+    }
 
     builder.Services.AddParsers();
-
+    builder.Services.AddSingleton<SiteService>();
     builder.Services.AddHostedService<GatewayHost>();
 
     var app = builder.Build();

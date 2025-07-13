@@ -1,4 +1,5 @@
 using ContentMirror.Application.Parsers;
+using ContentMirror.Core;
 using ContentMirror.Core.Configs;
 using Microsoft.Extensions.Options;
 
@@ -77,12 +78,12 @@ public class GatewayHost(
                     }
 
                     logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
-                        now.Add(-siteConfig.MaxCreatedAt).Date.ToString(ParsingConfig.DateFormat));
+                        now.Add(-siteConfig.MaxCreatedAt).Date.ToString(StaticData.DateFormat));
                     var news = await parser.ParseNews();
                 }
 
                 logger.LogInformation("Обработка всех сайтов завершена, следующая {DateTime}",
-                    now.Add(_delay).ToString(ParsingConfig.DatetimeFormat));
+                    now.Add(_delay).ToString(StaticData.DatetimeFormat));
                 await Task.Delay(_delay, lifetime.ApplicationStopping);
             }
             catch (OperationCanceledException)
