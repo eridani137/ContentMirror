@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using ContentMirror.Application.Parsers.Abstractions;
 using ContentMirror.Core.Configs;
 using ContentMirror.Core.Entities;
@@ -8,7 +10,7 @@ using ParserExtension;
 
 namespace ContentMirror.Application.Parsers;
 
-public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<TravelqParser> logger) : ISiteParser
+public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<TravelqParser> logger) : ISiteParser
 {
     public string SiteUrl => "https://travelq.ru";
     public CookieJar Cookies { get; set; } = new();
@@ -18,31 +20,21 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         return $"{SiteUrl}/page/{number}/";
     }
 
-    public async Task<List<NewsEntity>> ParseNews(List<string> existPosts, CancellationToken ct = default)
+    public async IAsyncEnumerable<NewsEntity> ParseNews(List<string> existPosts, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        var result = new List<NewsEntity>();
-
-        var page = 1;
-        while (!ct.IsCancellationRequested)
+        var page = await GetLastPage(ct);
+        while (!ct.IsCancellationRequested && page > 0)
         {
-            try
+            await foreach (var news in ParsePage(page, existPosts, ct))
             {
-                var pageResult = await ParsePage(page, existPosts, ct);
-                if (pageResult.Count == 0) break;
-                result.AddRange(pageResult);
-                break; // TODO
-                page++;
+                yield return news;
             }
-            catch
-            {
-                break;
-            }
+            
+            page--;
         }
-
-        return result;
     }
 
-    public async Task<List<NewsEntity>> ParsePage(int page, List<string> existPosts, CancellationToken ct = default)
+    public async IAsyncEnumerable<NewsEntity> ParsePage(int page, List<string> existPosts, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var url = GetPaginationUrl(page);
         logger.LogInformation("Получение новостей со страницы {Page} [{PageUrl}]", page, url);
@@ -56,18 +48,18 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         if (parse is null)
         {
             logger.LogError("Ошибка получения страницы {PageUrl}", url);
-            return [];
+            yield break;
         }
 
-        var result = new List<NewsEntity>();
-
         var newsXpaths = parse.GetXPaths("//main[@id='genesis-content']/div/article");
+        newsXpaths.Reverse();
         foreach (var newsXpath in newsXpaths)
         {
+            if (ct.IsCancellationRequested) yield break;
+
+            NewsEntity? newsEntity = null;
             try
             {
-                if (ct.IsCancellationRequested) break;
-                
                 var preview = ParsePreview(parse, newsXpath);
                 if (preview is null)
                 {
@@ -81,20 +73,19 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
                     continue;
                 }
 
-                var newsEntity = await ParseFullPage(preview, ct);
-                
-                result.Add(newsEntity);
+                newsEntity = await ParseFullPage(preview, ct);
             }
             catch (OperationCanceledException)
             {
+                yield break;
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Ошибка в цикле обработки списка новостей");
+                logger.LogError(e, "Ошибка в цикле обработки новостей на странице {Page}", page);
             }
-        }
 
-        return result;
+            if (newsEntity is not null) yield return newsEntity;
+        }
     }
 
     public PreviewNewsEntity? ParsePreview(ParserWrapper parse, string xpath)
@@ -105,11 +96,13 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         var url = parse.GetAttributeValue($"{xpath}{a}");
         var description = parse.GetInnerText($"{xpath}//div[@class='entry-content']/p");
         var dateString = parse.GetInnerText($"{xpath}//p[@class='entry-meta']");
+        var img = parse.GetHighestQualityFromSourceSimple($"{xpath}//header[@class='entry-header']/a/picture/source");
 
         if (string.IsNullOrEmpty(title) ||
             string.IsNullOrEmpty(url) ||
             string.IsNullOrEmpty(description) ||
-            string.IsNullOrEmpty(dateString))
+            string.IsNullOrEmpty(dateString) ||
+            img is null)
         {
             return null;
         }
@@ -121,7 +114,8 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
             Url = url,
             Title = title,
             Description = description,
-            Date = date
+            Date = date,
+            Image = img.Url
         };
     }
 
@@ -139,12 +133,14 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
         {
             throw new NullReferenceException("parse is null");
         }
-        
-        const string rootXpath = "//main[@id='genesis-content']/article/div[@class='entry-content' and not(ancestor::footer)]";
+
+        const string rootXpath =
+            "//main[@id='genesis-content']/article/div[@class='entry-content' and not(ancestor::footer)]";
 
         var sb = new StringBuilder();
-        
-        var articleNodes = parse.GetNodesByXPath($"{rootXpath}/*[not(self::p and starts-with(normalize-space(.), 'По теме:') and a)]");
+
+        var articleNodes =
+            parse.GetNodesByXPath($"{rootXpath}/*[not(self::p and starts-with(normalize-space(.), 'По теме:') and a)]");
         foreach (var articleNode in articleNodes)
         {
             sb.AppendLine(articleNode.OuterHtml);
@@ -158,4 +154,28 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
 
         return result;
     }
+
+    public async Task<int> GetLastPage(CancellationToken ct = default)
+    {
+        var parse = await SiteUrl
+            .WithHeaders(parsingConfig.Value.Headers)
+            .WithCookies(Cookies)
+            .GetStringAsync(cancellationToken: ct)
+            .GetParse();
+
+        if (parse is null) throw new ApplicationException($"Ошибка получения главной страницы {SiteUrl}");
+
+        var hrefs = parse.GetAttributeValues("//div[@role='navigation']/ul/li/a");
+
+        var pagesCount = PageNumberRegex().GetLastPageNumber(hrefs);
+
+        logger.LogInformation("Последняя страница {PagesCount}", pagesCount);
+        
+        return pagesCount;
+    }
+
+    
+
+    [GeneratedRegex(@"/page/(\d+)/?")]
+    private static partial Regex PageNumberRegex();
 }

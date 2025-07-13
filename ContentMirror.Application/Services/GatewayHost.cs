@@ -1,27 +1,26 @@
 using ContentMirror.Application.Parsers;
 using ContentMirror.Core;
 using ContentMirror.Core.Configs;
+using ContentMirror.Infrastructure;
 using Microsoft.Extensions.Options;
 
 namespace ContentMirror.Application.Services;
 
 public class GatewayHost(
     ParsersFactory parsersFactory,
+    PostsRepository postsRepository,
     IOptions<ParsingConfig> parsingConfig,
     ILogger<GatewayHost> logger,
-    SiteService siteService,
     IHostApplicationLifetime lifetime)
     : IHostedService
 {
     private Task _worker = null!;
     private readonly TimeSpan _delay = TimeSpan.FromHours(1);
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await siteService.Authorization(cancellationToken);
-            
             _worker = Worker();
             logger.LogInformation("Сервис запущен");
         }
@@ -29,6 +28,8 @@ public class GatewayHost(
         {
             logger.LogError(e, "Ошибка запуска сервиса");
         }
+
+        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -56,7 +57,7 @@ public class GatewayHost(
         {
             try
             {
-                var existTitlePosts = await siteService.GetPosts();
+                var existTitlePosts = await postsRepository.GetPostTitles();
                 
                 logger.LogInformation("Начало обработки сайтов");
 
@@ -82,7 +83,11 @@ public class GatewayHost(
 
                     logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
                         now.Add(-siteConfig.MaxCreatedAt).Date.ToString(StaticData.DateFormat));
-                    var news = await parser.ParseNews(existTitlePosts);
+
+                    await foreach (var news in parser.ParseNews(existTitlePosts))
+                    {
+                        await postsRepository.AddPost(news);
+                    }
                 }
 
                 logger.LogInformation("Обработка всех сайтов завершена, следующая {DateTime}",

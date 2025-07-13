@@ -1,9 +1,10 @@
+using AutoMapper;
 using ContentMirror.Core.Entities;
 using Dapper;
 
 namespace ContentMirror.Infrastructure;
 
-public class PostsRepository(ConnectionFactory connectionFactory)
+public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper)
 {
     public async Task<List<string>> GetPostTitles()
     {
@@ -16,7 +17,7 @@ public class PostsRepository(ConnectionFactory connectionFactory)
         return titles;
     }
 
-    public async Task<int> AddPost(PostEntity post)
+    public async Task<int> AddPost(NewsEntity newsEntity)
     {
         const string sql = """
                                        INSERT INTO in_posts (
@@ -51,11 +52,8 @@ public class PostsRepository(ConnectionFactory connectionFactory)
                                        );
                                        SELECT LAST_INSERT_ID();
                            """;
-        
-        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        post.CreatedAt = now;
-        post.UpdatedAt = now;
-        post.PostPublishDate = now;
+
+        var post = mapper.Map<PostEntity>(newsEntity);
 
         await using var connection = await connectionFactory.CreateConnection();
         var insertedId = await connection.ExecuteScalarAsync<int>(sql, post);

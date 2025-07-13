@@ -1,5 +1,6 @@
 using ContentMirror.Application;
 using ContentMirror.Application.Configuration;
+using ContentMirror.Application.Mappings;
 using ContentMirror.Application.Services;
 using ContentMirror.Core.Configs;
 using ContentMirror.Infrastructure;
@@ -10,7 +11,7 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
     ConfigureLogging.Configure();
-    
+
     builder.Host.UseSerilog(Log.Logger);
 
     builder.Services.Configure<ParsingConfig>(builder.Configuration.GetSection(nameof(ParsingConfig)));
@@ -19,7 +20,7 @@ try
     {
         throw new ApplicationException("Нужно указать настройки парсинга");
     }
-    
+
     builder.Services.Configure<SiteConfig>(builder.Configuration.GetSection(nameof(SiteConfig)));
     var siteConfig = builder.Configuration.GetSection(nameof(SiteConfig)).Get<SiteConfig>();
     if (siteConfig is null)
@@ -28,9 +29,12 @@ try
     }
 
     builder.Services.AddParsers();
+    builder.Services.AddAutoMapper(configuration =>
+    {
+        configuration.AddProfile<PostProfile>();
+    });
     builder.Services.AddSingleton<ConnectionFactory>();
     builder.Services.AddSingleton<PostsRepository>();
-    builder.Services.AddSingleton<SiteService>();
     builder.Services.AddHostedService<GatewayHost>();
 
     var app = builder.Build();
