@@ -2,6 +2,7 @@ using ContentMirror.Application.Parsers;
 using ContentMirror.Core;
 using ContentMirror.Core.Configs;
 using ContentMirror.Infrastructure;
+using LiteDB;
 using Microsoft.Extensions.Options;
 
 namespace ContentMirror.Application.Services;
@@ -10,12 +11,12 @@ public class GatewayHost(
     ParsersFactory parsersFactory,
     PostsRepository postsRepository,
     IOptions<ParsingConfig> parsingConfig,
+    LiteContext liteContext,
     ILogger<GatewayHost> logger,
     IHostApplicationLifetime lifetime)
     : IHostedService
 {
     private Task _worker = null!;
-    private readonly TimeSpan _delay = TimeSpan.FromHours(1);
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -57,26 +58,66 @@ public class GatewayHost(
         {
             try
             {
-                var existTitlePosts = await postsRepository.GetPostTitles();
-                
-                logger.LogInformation("Начало обработки сайтов");
-
-                var parsers = parsersFactory.GetParsers();
                 var now = DateTime.Now;
+                var parsers = parsersFactory.GetParsers();
+
+                logger.LogInformation("Начало подчистки записей");
+
                 foreach (var parser in parsers)
                 {
-                    if (parsingConfig.Value.Sites.FirstOrDefault(s => s.Url == parser.SiteUrl) is not { } siteConfig)
+                    if (parsingConfig.Value.IsExistAndEnabled(parser.SiteUrl) is not { } siteConfig)
                     {
                         logger.LogWarning(
-                            "Обработка {Url} пропущена, так как сайт отсутствует в конфигурации",
+                            "Обработка {Url} пропущена, так как сайт отсутствует или выключен в конфигурации",
                             parser.SiteUrl);
                         continue;
                     }
 
-                    if (!siteConfig.IsEnabled)
+                    var postsByFeedId = await postsRepository.GetPostsByFeedId(parser.FeedId);
+                    var expiredPosts = postsByFeedId
+                        .Where(p =>
+                            DateTime.UtcNow > DateTimeOffset.FromUnixTimeSeconds(p.CreatedAt).UtcDateTime +
+                            siteConfig.RemovalBy)
+                        .ToList();
+
+                    if (expiredPosts.Count > 0)
+                    {
+                        logger.LogInformation("Подчистка {ExpiredCount} записей", expiredPosts.Count);
+
+                        foreach (var expiredPost in expiredPosts)
+                        {
+                            try
+                            {
+                                await postsRepository.DeletePost(expiredPost.PostId, parser.FeedId);
+                                liteContext.RemovedNews.Insert(new NewsEntry()
+                                {
+                                    Id = ObjectId.NewObjectId(),
+                                    Url = expiredPost.PostSource
+                                });
+                            }
+                            catch (Exception e)
+                            {
+                                logger.LogError(e, "Ошибка подчистки поста {PostId}", expiredPost.PostId);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        logger.LogInformation("Подчистка не требуется");
+                    }
+                }
+
+                var existTitlePosts = await postsRepository.GetPostTitles();
+                var removedPosts = liteContext.RemovedNews.FindAll().ToList();
+
+                logger.LogInformation("Начало обработки сайтов");
+
+                foreach (var parser in parsers)
+                {
+                    if (parsingConfig.Value.IsExistAndEnabled(parser.SiteUrl) is not { } siteConfig)
                     {
                         logger.LogWarning(
-                            "Обработка {Url} пропущена, так как сайт отключен в конфигурации",
+                            "Обработка {Url} пропущена, так как сайт отсутствует или выключен в конфигурации",
                             parser.SiteUrl);
                         continue;
                     }
@@ -84,7 +125,8 @@ public class GatewayHost(
                     logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
                         now.Add(-siteConfig.MaxCreatedAt).Date.ToString(StaticData.DateFormat));
 
-                    await foreach (var news in parser.ParseNews(existTitlePosts))
+                    await foreach (var news in parser.ParseNews(existTitlePosts, removedPosts,
+                                       lifetime.ApplicationStopping))
                     {
                         try
                         {
@@ -99,8 +141,8 @@ public class GatewayHost(
                 }
 
                 logger.LogInformation("Обработка всех сайтов завершена, следующая {DateTime}",
-                    now.Add(_delay).ToString(StaticData.DatetimeFormat));
-                await Task.Delay(_delay, lifetime.ApplicationStopping);
+                    now.Add(parsingConfig.Value.Delay).ToString(StaticData.DatetimeFormat));
+                await Task.Delay(parsingConfig.Value.Delay, lifetime.ApplicationStopping);
             }
             catch (OperationCanceledException)
             {

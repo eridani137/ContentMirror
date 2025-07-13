@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using ContentMirror.Application.Parsers.Abstractions;
 using ContentMirror.Core.Configs;
 using ContentMirror.Core.Entities;
+using ContentMirror.Infrastructure;
 using Flurl.Http;
 using Microsoft.Extensions.Options;
 using ParserExtension;
@@ -12,6 +13,7 @@ namespace ContentMirror.Application.Parsers;
 
 public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<TravelqParser> logger) : ISiteParser
 {
+    public int FeedId => 100;
     public string SiteUrl => "https://travelq.ru";
     public CookieJar Cookies { get; set; } = new();
 
@@ -20,12 +22,12 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
         return $"{SiteUrl}/page/{number}/";
     }
 
-    public async IAsyncEnumerable<NewsEntity> ParseNews(List<string> existPosts, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<NewsEntity> ParseNews(List<string> existPosts, List<NewsEntry> removedPosts, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var page = await GetLastPage(ct);
         while (!ct.IsCancellationRequested && page > 0)
         {
-            await foreach (var news in ParsePage(page, existPosts, ct))
+            await foreach (var news in ParsePage(page, existPosts, removedPosts, ct))
             {
                 yield return news;
             }
@@ -34,7 +36,7 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
         }
     }
 
-    public async IAsyncEnumerable<NewsEntity> ParsePage(int page, List<string> existPosts, [EnumeratorCancellation] CancellationToken ct = default)
+    public async IAsyncEnumerable<NewsEntity> ParsePage(int page, List<string> existPosts, List<NewsEntry> removedPosts, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var url = GetPaginationUrl(page);
         logger.LogInformation("Получение новостей со страницы {Page} [{PageUrl}]", page, url);
@@ -67,7 +69,7 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
                     continue;
                 }
 
-                if (existPosts.Contains(preview.Title))
+                if (existPosts.Contains(preview.Title) || removedPosts.Any(p => p.Url == preview.Url))
                 {
                     logger.LogInformation("Пропускаю новость: {Title} [{Url}]", preview.Title, preview.Url);
                     continue;
@@ -140,7 +142,7 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
         var sb = new StringBuilder();
 
         var articleNodes =
-            parse.GetNodesByXPath($"{rootXpath}/*[not(self::p and starts-with(normalize-space(.), 'По теме:') and a)]");
+            parse.GetNodesByXPath($"{rootXpath}/*[not(self::p and starts-with(normalize-space(.), 'По теме:') and a) and not(self::div and contains(@class, 'tripster-widget')) and not(self::div and contains(@class, 'related') and contains(@class, 'posts'))]");
         foreach (var articleNode in articleNodes)
         {
             sb.AppendLine(articleNode.OuterHtml);
@@ -149,7 +151,8 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
         var result = new NewsEntity()
         {
             Preview = preview,
-            Article = sb.ToString()
+            Article = sb.ToString(),
+            FeedId = FeedId
         };
 
         return result;

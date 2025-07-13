@@ -17,6 +17,7 @@ public class PostProfile : Profile
             .ForMember(dest => dest.PostPublishDate, opt => opt.MapFrom(src => now))
             .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => now))
             .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => now))
-            .ForMember(dest => dest.PostFeaturedImage, opt => opt.MapFrom(src => src.Preview.Image));
+            .ForMember(dest => dest.PostFeaturedImage, opt => opt.MapFrom(src => src.Preview.Image))
+            .ForMember(dest => dest.PostFeedId, opt => opt.MapFrom(src => src.FeedId));
     }
 }

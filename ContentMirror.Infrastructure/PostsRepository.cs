@@ -58,4 +58,48 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
         await using var connection = await connectionFactory.CreateConnection();
         await connection.ExecuteScalarAsync<int>(sql, post);
     }
+    
+    public async Task DeletePost(int id, int postFeedId)
+    {
+        const string sql = """
+                               DELETE FROM in_posts
+                               WHERE post_id = @PostId AND post_feed_id = @PostFeedId
+                           """;
+
+        await using var connection = await connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(sql, new
+        {
+            PostId = id,
+            PostFeedId = postFeedId
+        });
+    }
+    
+    public async Task<List<PostEntity>> GetPostsByFeedId(int postFeedId)
+    {
+        const string sql = """
+                               SELECT
+                                   post_id AS PostId,
+                                   post_category_id AS PostCategoryId,
+                                   post_feed_id AS PostFeedId,
+                                   post_title AS PostTitle,
+                                   post_author AS PostAuthor,
+                                   post_content AS PostContent,
+                                   post_excerpt AS PostExcerpt,
+                                   post_featured_image AS PostFeaturedImage,
+                                   post_type AS PostType,
+                                   post_source AS PostSource,
+                                   post_hits AS PostHits,
+                                   post_pubdate AS PostPublishDate,
+                                   created_at AS CreatedAt,
+                                   updated_at AS UpdatedAt
+                               FROM in_posts
+                               WHERE post_feed_id = @PostFeedId
+                           """;
+
+        await using var connection = await connectionFactory.CreateConnection();
+
+        var posts = await connection.QueryAsync<PostEntity>(sql, new { PostFeedId = postFeedId });
+
+        return posts.ToList();
+    }
 }

@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using ContentMirror.Core.Configs;
+using ContentMirror.Core.Entities;
 using ParserExtension;
 
 namespace ContentMirror.Application;
@@ -26,21 +28,21 @@ public static partial class Extensions
 
         return 0;
     }
-    
+
     public static ImageInfo? GetHighestQualityFromSourceSimple(this ParserWrapper parser, string xpath)
     {
         var srcsets = parser.GetAttributeValues($"{xpath}", "srcset");
         var types = parser.GetAttributeValues($"{xpath}", "type");
-        
+
         if (srcsets.Count == 0) return null;
-        
+
         var allImages = new List<ImageInfo>();
-        
+
         for (var i = 0; i < srcsets.Count; i++)
         {
             var srcset = srcsets[i];
             var type = i < types.Count ? types[i] : "";
-            
+
             var images = ParseSrcset(srcset);
             foreach (var image in images)
             {
@@ -48,22 +50,22 @@ public static partial class Extensions
                 allImages.Add(image);
             }
         }
-        
+
         return allImages.OrderByDescending(img => img.Width).FirstOrDefault();
     }
-    
+
     private static List<ImageInfo> ParseSrcset(string srcset)
     {
         var images = new List<ImageInfo>();
-        
+
         if (string.IsNullOrEmpty(srcset)) return images;
-        
+
         var parts = srcset.Split(',');
-        
+
         foreach (var part in parts)
         {
             var trimmedPart = part.Trim();
-            
+
             var match = MyRegex().Match(trimmedPart);
             if (!match.Success) continue;
             var url = match.Groups[1].Value.Trim();
@@ -76,10 +78,10 @@ public static partial class Extensions
                 });
             }
         }
-        
+
         return images;
     }
-    
+
     private static string GetImageFormat(string mimeType, string url)
     {
         if (!string.IsNullOrEmpty(mimeType))
@@ -89,12 +91,12 @@ public static partial class Extensions
             if (mimeType.Contains("png")) return "PNG";
             if (mimeType.Contains("avif")) return "AVIF";
         }
-        
+
         if (url.Contains(".webp")) return "WebP";
         if (url.Contains(".avif")) return "AVIF";
         if (url.Contains(".jpg") || url.Contains(".jpeg")) return "JPEG";
         if (url.Contains(".png")) return "PNG";
-        
+
         return "Unknown";
     }
 
