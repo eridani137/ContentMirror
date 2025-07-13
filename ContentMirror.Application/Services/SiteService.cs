@@ -1,11 +1,12 @@
 using ContentMirror.Core.Configs;
+using ContentMirror.Infrastructure;
 using Flurl.Http;
 using Microsoft.Extensions.Options;
 using ParserExtension;
 
 namespace ContentMirror.Application.Services;
 
-public class SiteService(IOptions<SiteConfig> siteConfig, ILogger<SiteService> logger)
+public class SiteService(PostsRepository postsRepository, IOptions<SiteConfig> siteConfig, ILogger<SiteService> logger)
 {
     private readonly CookieJar _cookies = new();
     private const string SiteUrl = "https://newstravel.online";
@@ -35,44 +36,14 @@ public class SiteService(IOptions<SiteConfig> siteConfig, ILogger<SiteService> l
         logger.LogInformation("Авторизация прошла успешно");
     }
 
-    public async Task<List<string>> GetPosts(CancellationToken ct = default)
+    public async Task<List<string>> GetPosts()
     {
         logger.LogInformation("Получение уже опубликованных постов...");
 
-        var titles = new List<string>();
+        var titles = await postsRepository.GetPostTitles();
         
-        var page = 1;
-        while (!ct.IsCancellationRequested)
-        {
-            try
-            {
-                var url = $"{SiteUrl}/dashboard/posts?page={page}&sort=newest";
-
-                var parse = await url
-                    .WithHeaders(siteConfig.Value.Headers)
-                    .WithCookies(_cookies)
-                    .GetStringAsync(cancellationToken: ct)
-                    .GetParse();
-
-                if (parse is null) throw new NullReferenceException("Не удалось получить страницу постов");
-
-                var postTitles =
-                    parse.GetInnerTextValues("//div[@class='table-responsive']//div[@class='text-truncate']");
-                
-                titles.AddRange(postTitles);
-
-                break; // TODO
-                
-                page++;
-            }
-            catch
-            {
-                break;
-            }
-        }
+        logger.LogInformation("Получено {PostsCount} уже опубликованных заголовков", titles.Count);
         
-        logger.LogInformation("Обработано {PagesCount} страниц постов, найдено {ArticleCount} статей", page, titles.Count);
-
         return titles;
     }
     

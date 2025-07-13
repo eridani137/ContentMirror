@@ -56,7 +56,7 @@ public class GatewayHost(
         {
             try
             {
-                var existTitlePosts = await siteService.GetPosts(lifetime.ApplicationStopping);
+                var existTitlePosts = await siteService.GetPosts();
                 
                 logger.LogInformation("Начало обработки сайтов");
 

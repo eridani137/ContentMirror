@@ -2,6 +2,7 @@ using ContentMirror.Application;
 using ContentMirror.Application.Configuration;
 using ContentMirror.Application.Services;
 using ContentMirror.Core.Configs;
+using ContentMirror.Infrastructure;
 using Serilog;
 using Spectre.Console;
 
@@ -27,6 +28,8 @@ try
     }
 
     builder.Services.AddParsers();
+    builder.Services.AddSingleton<ConnectionFactory>();
+    builder.Services.AddSingleton<PostsRepository>();
     builder.Services.AddSingleton<SiteService>();
     builder.Services.AddHostedService<GatewayHost>();
 

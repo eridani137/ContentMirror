@@ -32,6 +32,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\ContentMirror.Core\ContentMirror.Core.csproj" />
+      <ProjectReference Include="..\ContentMirror.Infrastructure\ContentMirror.Infrastructure.csproj" />
     </ItemGroup>
 
     <ItemGroup>
