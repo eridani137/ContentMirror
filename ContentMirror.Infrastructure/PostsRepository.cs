@@ -17,7 +17,7 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
         return titles;
     }
 
-    public async Task<int> AddPost(NewsEntity newsEntity)
+    public async Task AddPost(NewsEntity newsEntity)
     {
         const string sql = """
                                        INSERT INTO in_posts (
@@ -56,7 +56,6 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
         var post = mapper.Map<PostEntity>(newsEntity);
 
         await using var connection = await connectionFactory.CreateConnection();
-        var insertedId = await connection.ExecuteScalarAsync<int>(sql, post);
-        return insertedId;
+        await connection.ExecuteScalarAsync<int>(sql, post);
     }
 }

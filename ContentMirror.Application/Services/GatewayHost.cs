@@ -86,7 +86,15 @@ public class GatewayHost(
 
                     await foreach (var news in parser.ParseNews(existTitlePosts))
                     {
-                        await postsRepository.AddPost(news);
+                        try
+                        {
+                            await postsRepository.AddPost(news);
+                            logger.LogInformation("Новость добавлена: {Title}", news.Preview.Title);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.LogError(e, "Ошибка при добавлении новости: {SourceUrl}", news.Preview.Url);
+                        }
                     }
                 }
 
