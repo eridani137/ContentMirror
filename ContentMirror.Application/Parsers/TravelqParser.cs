@@ -1,3 +1,4 @@
+using System.Text;
 using ContentMirror.Application.Parsers.Abstractions;
 using ContentMirror.Core.Configs;
 using ContentMirror.Core.Entities;
@@ -29,6 +30,7 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
                 var pageResult = await ParsePage(i, ct);
                 if (pageResult.Count == 0) break;
                 result.AddRange(pageResult);
+                break; // TODO
             }
             catch
             {
@@ -76,12 +78,8 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
 
                 // TODO: check is contains
 
-                // logger.LogInformation("Парсинг {Title} [{Url}]", preview.Title, preview.Url);
-
-                var newsEntity = new NewsEntity()
-                {
-                    Preview = preview
-                };
+                var newsEntity = await ParseFullPage(preview, ct);
+                
                 result.Add(newsEntity);
             }
             catch (OperationCanceledException)
@@ -122,5 +120,39 @@ public class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogger<Travel
             Description = description,
             Date = date
         };
+    }
+
+    public async Task<NewsEntity> ParseFullPage(PreviewNewsEntity preview, CancellationToken ct = default)
+    {
+        logger.LogInformation("Парсинг {Title} [{Url}]", preview.Title, preview.Url);
+
+        var parse = await preview.Url
+            .WithHeaders(parsingConfig.Value.Headers)
+            .WithCookies(Cookies)
+            .GetStringAsync(cancellationToken: ct)
+            .GetParse();
+
+        if (parse is null)
+        {
+            throw new NullReferenceException("parse is null");
+        }
+        
+        const string rootXpath = "//main[@id='genesis-content']/article/div[@class='entry-content' and not(ancestor::footer)]";
+
+        var sb = new StringBuilder();
+        
+        var articleNodes = parse.GetNodesByXPath($"{rootXpath}/*[not(self::p and starts-with(normalize-space(.), 'По теме:') and a)]");
+        foreach (var articleNode in articleNodes)
+        {
+            sb.AppendLine(articleNode.OuterHtml);
+        }
+
+        var result = new NewsEntity()
+        {
+            Preview = preview,
+            Article = sb.ToString()
+        };
+
+        return result;
     }
 }

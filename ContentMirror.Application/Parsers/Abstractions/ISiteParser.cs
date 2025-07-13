@@ -12,4 +12,5 @@ public interface ISiteParser
     Task<List<NewsEntity>> ParseNews(CancellationToken ct = default);
     Task<List<NewsEntity>> ParsePage(int page, CancellationToken ct = default);
     PreviewNewsEntity? ParsePreview(ParserWrapper parse, string xpath);
+    Task<NewsEntity> ParseFullPage(PreviewNewsEntity preview, CancellationToken ct = default);
 }
