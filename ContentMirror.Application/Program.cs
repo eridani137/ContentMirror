@@ -8,20 +8,9 @@ using Spectre.Console;
 try
 {
     var builder = WebApplication.CreateBuilder(args);
-    
-    var otlpConfig = builder.Configuration.GetSection(nameof(OpenTelemetryConfig)).Get<OpenTelemetryConfig>();
-    if (otlpConfig is null)
-    {
-        throw new ApplicationException("Нужно указать настройки OpenTelemetry");
-    }
-
-    ConfigureLogging.Configure(otlpConfig);
-    OpenTelemetryConfiguration.Configure(builder, otlpConfig);
+    ConfigureLogging.Configure();
     
     builder.Host.UseSerilog(Log.Logger);
-    
-    Log.Information("OTLP Endpoint: {Endpoint}", otlpConfig.Endpoint);
-    Log.Information("OTLP Token: {Token}", otlpConfig.Token);
 
     builder.Services.Configure<ParsingConfig>(builder.Configuration.GetSection(nameof(ParsingConfig)));
     var parsingConfig = builder.Configuration.GetSection(nameof(ParsingConfig)).Get<ParsingConfig>();
@@ -30,7 +19,7 @@ try
         throw new ApplicationException("Нужно указать настройки парсинга");
     }
     
-    builder.Services.Configure<ParsingConfig>(builder.Configuration.GetSection(nameof(SiteConfig)));
+    builder.Services.Configure<SiteConfig>(builder.Configuration.GetSection(nameof(SiteConfig)));
     var siteConfig = builder.Configuration.GetSection(nameof(SiteConfig)).Get<SiteConfig>();
     if (siteConfig is null)
     {

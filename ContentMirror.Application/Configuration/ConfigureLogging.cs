@@ -2,13 +2,14 @@ using ContentMirror.Core.Configs;
 using Serilog;
 using Serilog.Core;
 using Serilog.Events;
+using Serilog.Sinks.Spectre;
 
 namespace ContentMirror.Application.Configuration;
 
 public static class ConfigureLogging
 {
     public static bool IsConfigured { get; set; }
-    public static void Configure(OpenTelemetryConfig otlpConfig)
+    public static void Configure()
     {
         const string logs = "logs";
         var logsPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, logs));
@@ -31,9 +32,8 @@ public static class ConfigureLogging
             .Enrich.WithEnvironmentName()
             .Enrich.WithClientIp()
             .Enrich.WithCorrelationId()
-            .WriteTo.Console(outputTemplate: outputTemplate, levelSwitch: levelSwitch)
+            .WriteTo.Spectre(outputTemplate: outputTemplate, levelSwitch: levelSwitch)
             .WriteTo.File($"{logsPath}/.log", rollingInterval: RollingInterval.Day, outputTemplate: outputTemplate, levelSwitch: levelSwitch)
-            .WriteTo.Seq(otlpConfig.Endpoint, apiKey: otlpConfig.Token)
             .CreateLogger();
 
         IsConfigured = true;

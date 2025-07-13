@@ -9,16 +9,19 @@ public class GatewayHost(
     ParsersFactory parsersFactory,
     IOptions<ParsingConfig> parsingConfig,
     ILogger<GatewayHost> logger,
+    SiteService siteService,
     IHostApplicationLifetime lifetime)
     : IHostedService
 {
     private Task _worker = null!;
     private readonly TimeSpan _delay = TimeSpan.FromHours(1);
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
+            await siteService.Authorization();
+            
             _worker = Worker();
             logger.LogInformation("Сервис запущен");
         }
@@ -26,8 +29,6 @@ public class GatewayHost(
         {
             logger.LogError(e, "Ошибка запуска сервиса");
         }
-
-        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
