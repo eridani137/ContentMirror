@@ -52,7 +52,7 @@ public class GatewayHost(
 
     private async Task Worker()
     {
-        await Task.Delay(3000, lifetime.ApplicationStopping);
+        await Task.Delay(TimeSpan.FromSeconds(10), lifetime.ApplicationStopping);
 
         while (!lifetime.ApplicationStopping.IsCancellationRequested)
         {

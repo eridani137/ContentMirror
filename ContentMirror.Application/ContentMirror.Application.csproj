@@ -4,6 +4,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     </PropertyGroup>
 
     <ItemGroup>
@@ -37,8 +38,14 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Content Include="..\.dockerignore">
+        <Link>.dockerignore</Link>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
       <Reference Include="ParserExtension">
-        <HintPath>..\..\ParserExtension\ParserExtension\bin\Debug\net9.0\ParserExtension.dll</HintPath>
+        <HintPath>..\libs\ParserExtension.dll</HintPath>
       </Reference>
     </ItemGroup>
 

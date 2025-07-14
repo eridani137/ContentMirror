@@ -1,0 +1,17 @@
+﻿services:
+  content_mirror:
+    image: contentmirror
+    build:
+      context: .
+      dockerfile: ContentMirror.Application/Dockerfile
+    environment:
+      - SiteConfig__ConnectionString=${DB_CONNECTION_STRING}
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - newsonlinebegettech_app_network
+
+networks:
+  newsonlinebegettech_app_network:
+    external: true
+    driver: bridge

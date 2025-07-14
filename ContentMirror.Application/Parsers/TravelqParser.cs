@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -109,7 +110,7 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
             return null;
         }
 
-        if (!DateTime.TryParse(dateString, out var date)) return null;
+        if (!DateTime.TryParse(dateString, new CultureInfo("ru-RU"), DateTimeStyles.None, out var date)) return null;
 
         return new PreviewNewsEntity()
         {
