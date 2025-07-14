@@ -11,7 +11,7 @@
     volumes:
       - ./logs:/app/logs
     networks:
-      - newsonlinebegettech_app_network
+      - newstravel_app_network
   
   seq:
     image: datalust/seq:latest
@@ -26,8 +26,8 @@
       - "5341:5341"
       - "8082:80"
     networks:
-      - newsonlinebegettech_app_network
+      - newstravel_app_network
 
 networks:
-  newsonlinebegettech_app_network:
+  newstravel_app_network:
     external: true
