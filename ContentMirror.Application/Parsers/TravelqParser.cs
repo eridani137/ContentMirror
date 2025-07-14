@@ -72,7 +72,6 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
 
                 if (existPosts.Contains(preview.Title) || removedPosts.Any(p => p.Url == preview.Url))
                 {
-                    logger.LogInformation("Пропускаю новость: {Title} [{Url}]", preview.Title, preview.Url);
                     continue;
                 }
 
