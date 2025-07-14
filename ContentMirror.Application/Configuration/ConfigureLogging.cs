@@ -18,6 +18,10 @@ public static class ConfigureLogging
         {
             Directory.CreateDirectory(logsPath);
         }
+        
+        var configuration = new ConfigurationBuilder()
+            .AddEnvironmentVariables()
+            .Build();
 
         const string outputTemplate =
             "[{Timestamp:HH:mm:ss} {Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
@@ -35,6 +39,7 @@ public static class ConfigureLogging
             .Enrich.WithCorrelationId()
             .WriteTo.Spectre(outputTemplate: outputTemplate, levelSwitch: levelSwitch)
             .WriteTo.File($"{logsPath}/.log", rollingInterval: RollingInterval.Day, outputTemplate: outputTemplate, levelSwitch: levelSwitch)
+            .WriteTo.Seq(serverUrl: configuration["OTEL_EXPORTER_OTLP_ENDPOINT"] ?? "http://localhost:5341")
             .CreateLogger();
 
         IsConfigured = true;
