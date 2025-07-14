@@ -6,12 +6,28 @@
       dockerfile: ContentMirror.Application/Dockerfile
     environment:
       - SiteConfig__ConnectionString=${DB_CONNECTION_STRING}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://seq:5341
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     volumes:
       - ./logs:/app/logs
+    networks:
+      - newsonlinebegettech_app_network
+  
+  seq:
+    image: datalust/seq:latest
+    container_name: seq
+    restart: unless-stopped
+    volumes:
+      - ./seq_data:/data
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_ADMINPASSWORD=Qwerty123_
+    ports:
+      - "5341:5341"
+      - "8082:80"
     networks:
       - newsonlinebegettech_app_network
 
 networks:
   newsonlinebegettech_app_network:
     external: true
-    driver: bridge

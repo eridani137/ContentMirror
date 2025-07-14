@@ -11,6 +11,7 @@ try
 {
     var builder = WebApplication.CreateBuilder(args);
     ConfigureLogging.Configure();
+    OpenTelemetryConfiguration.Configure(builder);
 
     builder.Host.UseSerilog(Log.Logger);
 
