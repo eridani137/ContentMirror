@@ -10,6 +10,8 @@
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     volumes:
       - ./logs:/app/logs
+    depends_on:
+      - seq
     networks:
       - newstravel_app_network
   
