@@ -74,6 +74,25 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
         });
     }
     
+    public async Task<List<PostEntity>> GetExpiredPostsByFeedId(int feedId, long expireBeforeTimestamp)
+    {
+        const string sql = """
+                               SELECT *
+                               FROM in_posts
+                               WHERE post_feed_id = @FeedId
+                                 AND created_at <= @ExpireBefore
+                           """;
+
+        await using var connection = await connectionFactory.CreateConnection();
+        var result = await connection.QueryAsync<PostEntity>(sql, new
+        {
+            FeedId = feedId,
+            ExpireBefore = expireBeforeTimestamp
+        });
+
+        return result.ToList();
+    }
+    
     public async Task<List<PostEntity>> GetPostsByFeedId(int postFeedId)
     {
         const string sql = """

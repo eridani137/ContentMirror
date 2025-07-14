@@ -33,6 +33,7 @@ try
     {
         configuration.AddProfile<PostProfile>();
     });
+    builder.Services.AddSingleton<LiteContext>();
     builder.Services.AddSingleton<ConnectionFactory>();
     builder.Services.AddSingleton<PostsRepository>();
     builder.Services.AddHostedService<GatewayHost>();

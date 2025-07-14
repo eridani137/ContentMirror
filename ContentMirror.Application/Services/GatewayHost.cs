@@ -73,12 +73,8 @@ public class GatewayHost(
                         continue;
                     }
 
-                    var postsByFeedId = await postsRepository.GetPostsByFeedId(parser.FeedId);
-                    var expiredPosts = postsByFeedId
-                        .Where(p =>
-                            DateTime.UtcNow > DateTimeOffset.FromUnixTimeSeconds(p.CreatedAt).UtcDateTime +
-                            siteConfig.RemovalBy)
-                        .ToList();
+                    var expireBefore = DateTimeOffset.UtcNow.Subtract(siteConfig.RemovalBy).ToUnixTimeSeconds();
+                    var expiredPosts = await postsRepository.GetExpiredPostsByFeedId(parser.FeedId, expireBefore);
 
                     if (expiredPosts.Count > 0)
                     {
