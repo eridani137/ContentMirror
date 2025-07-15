@@ -118,7 +118,7 @@ public class GatewayHost(
                         continue;
                     }
 
-                    logger.LogInformation("Обработка {Url}, максимальная дата новостей {MaxCreatedAt}", parser.SiteUrl,
+                    logger.LogInformation("Обработка {Url}, минимальная дата {MaxCreatedAt}", parser.SiteUrl,
                         now.Add(-siteConfig.MaxCreatedAt).Date.ToString(StaticData.DateFormat));
 
                     await foreach (var news in parser.ParseNews(existTitlePosts, removedPosts,
