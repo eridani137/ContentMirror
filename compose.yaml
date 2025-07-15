@@ -7,8 +7,10 @@
     restart: unless-stopped
     environment:
       - SiteConfig__ConnectionString=${DB_CONNECTION_STRING}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://seq:5341
-      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://seq:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=ContentMirror
+      - OTEL_EXPORTER_OTLP_HEADERS=X-Seq-ApiKey=WTkWfeNPZAenh77gSMnL
     volumes:
       - ./logs:/app/logs
     depends_on:
@@ -25,9 +27,12 @@
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=Qwerty123_
+      - SEQ_OPENTELEMETRY_ENABLED=True
+      - SEQ_OPENTELEMETRY_GRPC_ENDPOINT=0.0.0.0:4317
     ports:
       - "5341:5341"
       - "8082:80"
+      - "4317:4317"
     networks:
       - newstravel_app_network
 
