@@ -171,8 +171,6 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
         var hrefs = parse.GetAttributeValues("//div[@role='navigation']/ul/li/a");
 
         var pagesCount = PageNumberRegex().GetLastPageNumber(hrefs);
-
-        logger.LogInformation("Последняя страница {PagesCount}", pagesCount);
         
         return pagesCount;
     }

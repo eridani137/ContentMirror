@@ -136,8 +136,7 @@ public class GatewayHost(
                     }
                 }
 
-                logger.LogInformation("Обработка всех сайтов завершена, следующая {DateTime}",
-                    now.Add(parsingConfig.Value.Delay).ToString(StaticData.DatetimeFormat));
+                logger.LogInformation("Обработка всех сайтов завершена, следующая через {Minutes} минут", (int)parsingConfig.Value.Delay.TotalMinutes);
                 await Task.Delay(parsingConfig.Value.Delay, lifetime.ApplicationStopping);
             }
             catch (OperationCanceledException)
