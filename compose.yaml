@@ -10,7 +10,7 @@
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://seq:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=ContentMirror
-      - OTEL_EXPORTER_OTLP_HEADERS=X-Seq-ApiKey=${OTLP_API_KEY}
+      - OTEL_EXPORTER_OTLP_HEADERS=X-Seq-ApiKey=${SEQ_API_KEY}
     volumes:
       - ./logs:/app/logs
     depends_on:
