@@ -28,6 +28,10 @@ public partial class TravelqParser(IOptions<ParsingConfig> parsingConfig, ILogge
         var page = await GetLastPage(ct);
         while (!ct.IsCancellationRequested && page > 0)
         {
+            if (page == 1)
+            {
+                var r = "";
+            }
             await foreach (var news in ParsePage(page, existPosts, removedPosts, ct))
             {
                 yield return news;
