@@ -58,7 +58,7 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
         await using var connection = await connectionFactory.CreateConnection();
         await connection.ExecuteScalarAsync<int>(sql, post);
     }
-    
+
     public async Task DeletePost(int id, int postFeedId)
     {
         const string sql = """
@@ -73,11 +73,13 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
             PostFeedId = postFeedId
         });
     }
-    
+
     public async Task<List<PostEntity>> GetExpiredPostsByFeedId(int feedId, long expireBeforeTimestamp)
     {
         const string sql = """
-                               SELECT *
+                               SELECT
+                                   post_id AS PostId,
+                                   post_feed_id AS PostFeedId
                                FROM in_posts
                                WHERE post_feed_id = @FeedId
                                  AND created_at <= @ExpireBefore
@@ -92,7 +94,7 @@ public class PostsRepository(ConnectionFactory connectionFactory, IMapper mapper
 
         return result.ToList();
     }
-    
+
     public async Task<List<PostEntity>> GetPostsByFeedId(int postFeedId)
     {
         const string sql = """
