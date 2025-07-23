@@ -13,6 +13,7 @@
       - OTEL_EXPORTER_OTLP_HEADERS=X-Seq-ApiKey=${SEQ_API_KEY}
     volumes:
       - ./logs:/app/logs
+      - ./data.db:/app/data.db
     depends_on:
       - seq
     networks:
