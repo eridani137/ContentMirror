@@ -14,6 +14,7 @@
     volumes:
       - ./logs:/app/logs
       - ./data.db:/app/data.db
+      - ./data-log.db:/app/data-log.db
     depends_on:
       - seq
     networks:
